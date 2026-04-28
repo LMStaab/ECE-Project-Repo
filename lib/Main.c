@@ -40,12 +40,24 @@ int handSum(player x) {
 }
 
 
+deck makeDeck(){
+    deck d;
+    char suits[4][9] = {"diamonds", "clubs", "hearts", "spades"};
+    int deckIdx = 0;
 
+    for(int s = 0; s < 4; s++){
+        for(int i = 1; i <= 13; i++){ //1 = ace, 11, 12, 13 == jack, queen, king
+            card c;
+            strcpy(c.suit, suits[s]);
+            c.value = i;
+            d.cards[deckIdx] = c;
+        }
+    }
+    return d;
+}
 
 
 void shuffle(deck x[]) { // shuffles the deck we are playing with
-
-
 
 }
 
@@ -61,7 +73,6 @@ void resetHand(player x) { // resets player hand
 
 
 }
-
 
 int main(void) {
 
