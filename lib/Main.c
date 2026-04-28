@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 int main(void){
-    printf("Now i have a thing");
+    printf("fuck you momma");
+    
     return 0;
 }
