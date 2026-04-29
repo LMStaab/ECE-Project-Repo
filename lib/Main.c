@@ -49,8 +49,12 @@ void shuffle(deck x[]) { // shuffles the deck we are playing with
 
 }
 
-void initPlayer(player x) {
-
+void initPlayer(player *x, int num) {
+	printf("Enter player %d Name: ", num);
+	scanf("%s", x->name);
+	x->money = 100;
+	x->bet = 0;
+	x->playerNum = num;
 }
 
 void printHand(player x) {
@@ -66,7 +70,15 @@ void resetHand(player x) { // resets player hand
 int main(void) {
 
 	int numPlayers;
+	player crowd[4]; //array for players, max 4
+	int i;
 
+	printf("Enter the number of players: ");
+	scanf("%d", &numPlayers);
+
+	for (i =0; i < numPlayers; i++){
+		initPlayer(&crowd[i], i+1);
+	}
 
 
 
