@@ -4,9 +4,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-
-
-
 typedef struct card_s {
 
 	char suit[9]; // name of the suit (clubs, diamonds, hearts, spades)
@@ -35,17 +32,10 @@ typedef struct deck_s { // use a pointer for this in main? Dynamic memory alloc?
 int handSum(player x) {
 	int sum = 0;
 
-
 	return sum;
 }
 
-
-
-
-
 void shuffle(deck x[]) { // shuffles the deck we are playing with
-
-
 
 }
 
@@ -63,7 +53,6 @@ void printHand(player x) {
 
 void resetHand(player x) { // resets player hand
 
-
 }
 
 
@@ -76,7 +65,7 @@ int main(void) {
 	printf("Enter the number of players: ");
 	scanf("%d", &numPlayers);
 
-	for (i =0; i < numPlayers; i++){
+	for (i = 0; i < numPlayers; i++){
 		initPlayer(&crowd[i], i+1);
 	}
 
