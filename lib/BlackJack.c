@@ -59,7 +59,11 @@ void initDeck(Deck *deck) {
     }
     deck->top = 0;
 
-    // Shuffle
+    shuffle (deck);
+    
+}
+
+shuffle(Deck* deck){ // shuffles the deck via pointer
     for (int i = 0; i < DECK_SIZE; i++) {
         int r = i + rand() % (DECK_SIZE - i);
         Card temp = deck->cards[i];
@@ -67,7 +71,6 @@ void initDeck(Deck *deck) {
         deck->cards[r] = temp;
     }
 }
-
 // Returns the top card // Done by Lucas
 Card drawTop(Deck *deck) {
     return deck->cards[deck->top++];
