@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <time.h>
 
 #define MAX_PLAYERS 4
@@ -15,13 +16,15 @@
 
 // Structs done by Douglas
 
-typedef struct card_struct{
-    char suit[MAX_NAME];
+typedef struct cards{
+    char suit[9];
     int value;
-} Card;
+    // added attributes
+    char name[MAX_NAME];
+} card;
 
 typedef struct deck_struct{
-    Card cards[DECK_SIZE];
+    card cards[DECK_SIZE];
     int top;
 } Deck;
 
@@ -29,14 +32,14 @@ typedef struct player_struct{
     char name[MAX_NAME];
     int balance;
     int currentBet;
-    Card hand[10];
+    card hand[10];
     int handCount;
     int total;
     char status[20]; // "stand", "bust", "thirty-one", "fourteen"
 } Player;
 
 typedef struct dealer_struct{
-    Card hand[10];
+    card hand[10];
     int handCount;
     int total;
 } Dealer;
@@ -52,7 +55,8 @@ void initDeck(Deck *deck) {
     int k = 0;
     for (int i = 0; i < 4; i++) {
         for (int j = 0; j < 13; j++) {
-            sprintf(deck->cards[k].suit, "[%s of %s]", names[j], suits[i]);
+            strcpy(deck->cards[k].suit,  suits[i]);
+            strcpy(deck->cards[k].name, names[j]);
             deck->cards[k].value = vals[j];
             k++;
         }
@@ -62,14 +66,17 @@ void initDeck(Deck *deck) {
     // Shuffle
     for (int i = 0; i < DECK_SIZE; i++) {
         int r = i + rand() % (DECK_SIZE - i);
-        Card temp = deck->cards[i];
+        card temp = deck->cards[i];
         deck->cards[i] = deck->cards[r];
         deck->cards[r] = temp;
     }
 }
 
 // Returns the top card // Done by Lucas
-Card drawTop(Deck *deck) {
+card drawTop(Deck *deck) {
+    if (deck->top >= DECK_SIZE) {
+        initDeck(deck); // Reshuffles and resets deck->top to 0
+    }
     return deck->cards[deck->top++];
 }
 
@@ -84,16 +91,26 @@ void updateHandTotal(Player *p) {
 // Game Logic
 
 // Done by Douglas
-void playerTurn(Player *p, Deck *deck) {
-    char choice[10]; 
+void playerTurn(Player *p, Deck *deck, bool dealerFourteen) {
+    char choice[10];
+    int acesDrawn = 0; // Track total aces drawn this round
+    
+    // Check initial starting card for an Ace
+    if (p->handCount > 0 && p->hand[0].value == 11) {
+        acesDrawn++;
+        int aceVal;
+        printf("\n%s, your starting card is an Ace! Is it worth 1 or 11? ", p->name); 
+        scanf("%d", &aceVal); 
+        p->hand[0].value = aceVal;
+    }
+
     printf("\n%s's Turn\n", p->name);
-    p->balance -= p->currentBet;
     
     while (1) {
         updateHandTotal(p); // Make total up to date
         printf("%s has: ", p->name); 
         for(int i=0; i < p->handCount; i++) {
-            printf("%s ", p->hand[i].suit); // Print cards
+            printf("[%s of %s] ",p->hand[i].name, p->hand[i].suit); // Print cards
         }
         printf("\nTotal: %d\n", p->total);
 
@@ -107,22 +124,44 @@ void playerTurn(Player *p, Deck *deck) {
             strcpy(p->status, "bust");
             break;
         } else if (p->total == 31) {
-            printf("#31!\n");
+            printf("31!\n");
             strcpy(p->status, "thirty-one");
             break;
         }
 
         printf("Would you like to 'hit' or 'stand'? ");
-        scanf("%s", choice);
+        scanf("%9s", choice);
 
         if (strcmp(choice, "hit") == 0) {
             p->hand[p->handCount++] = drawTop(deck);
-            if (p->hand[p->handCount-1].value == 11 || p->total == 11) {
-                // Player choses whether ace is worth 1 or 11 points
-                int aceVal;
-                printf("You drew an Ace! Is it worth 1 or 11? "); 
-                scanf("%d", &aceVal); 
-                p->hand[p->handCount-1].value = aceVal;
+            
+            // If value is an ace
+            if (strcmp(p->hand[p->handCount-1].name, "Ace") == 0) {
+                acesDrawn++;
+                // If a player draws two aces, one counts as 1 and one counts as 11.
+                // A third ace can be assigned a 1 or an 11, with the next ace being fixed to the
+                // opposite value.
+                if (acesDrawn == 1 || acesDrawn == 3) {
+                    int aceVal;
+                    printf("You drew an Ace! Is it worth 1 or 11? "); 
+                    scanf("%d", &aceVal); 
+                    p->hand[p->handCount-1].value = aceVal;
+                } else {
+                    // 2nd or 4th Ace must be the opposite of the previous Ace
+                    int lastAceVal = 11; // Default
+                    for (int i = p->handCount - 2; i >= 0; i--) {
+                        if (strcmp(p->hand[i].name, "Ace") == 0) {
+                            lastAceVal = p->hand[i].value;
+                            break;
+                        }
+                    }
+                    int newAceVal = 11;
+                    if (lastAceVal == 11){ // opposite of the prervious
+                        newAceVal = 1;
+                    }
+                    printf("You drew an Ace! By the rules, it is automatically worth the opposite: %d.\n", newAceVal);
+                    p->hand[p->handCount-1].value = newAceVal;
+                }
             }
         } else {
             strcpy(p->status, "stand");
@@ -135,7 +174,7 @@ void playerTurn(Player *p, Deck *deck) {
 void getBet(Player *p){
     printf("Enter bet for Player %s (current balance: $%d): ", p->name, p->balance);
     scanf(" %d", &p->currentBet);
-    if (p->currentBet > p->balance || p->currentBet <= 0){
+    if (p->currentBet > p->balance || p-> currentBet <= 0){
         // Sets the bet to max value if too much is entered or too little
         p->currentBet = p->balance;
         printf("Balance is only $%d, bet set to $%d\n", p->balance, p->balance);
@@ -146,12 +185,27 @@ void getBet(Player *p){
 int dealersTurn(Dealer *dealer, Deck *deck){
     dealer->total = dealer->hand[0].value;
     int dealerBusted = 0;
+    int dealerAces = 0;
+    if(dealer->hand[0].value == 11){
+        dealerAces = 1;
+    }
 
     // Dealer strategy: continue drawing to get as close to 31 as possible,
     // Stops at 14, we picked 25 as our stopping point
     while (dealer->total < 25) { 
         dealer->hand[dealer->handCount++] = drawTop(deck);
-        dealer->total += dealer->hand[dealer->handCount - 1].value; // add new card to the total;
+        int drawnValue = dealer->hand[dealer->handCount - 1].value;
+        dealer->total += drawnValue; // add new card to the total;
+
+        if(drawnValue == 11){
+            dealerAces++;
+        }
+
+        // If dealer is over 31 because of aces, makes them into one instead of 11 
+        while (dealer->total > 31 && dealerAces > 0){
+            dealer->total -= 10;
+            dealerAces--;
+        }
 
         // If dealer hits 14, he reveals hand and stops drawing
         if (dealer->total == 14) {
@@ -184,7 +238,7 @@ int main() {
     printf("How many players? (Max 4): ");
     scanf("%d", &playerCount);
     if(playerCount > 4){ // If more than 4, sets the player number to 4 
-        printf("MAX PEOPLE IS 4, ONLY MAKING $ PLAYERS");
+        printf("MAX PEOPLE IS 4, ONLY MAKING 4 PLAYERS");
         playerCount = 4;
     }
 
@@ -192,9 +246,10 @@ int main() {
     Player players[MAX_PLAYERS];
     for (int i = 0; i < playerCount; i++) {
         printf("Enter name for Player %d: ", i + 1);
-        scanf("%s", players[i].name);
+        scanf("%49s", players[i].name);
         players[i].balance = 100; // Starting balance is 100
         getBet(&players[i]);
+        players[i].balance -= players[i].currentBet;
         players[i].handCount = 0; // 0 cards
     }
 
@@ -227,7 +282,7 @@ int main() {
             printf("Dealer busted with %d! All active players win double.\n", dealer.total);
             for (int i = 0; i < playerCount; i++) {
                 if (players[i].balance > 0) {
-                    players[i].balance += players[i].currentBet; // Pay out the bet
+                    players[i].balance += 2 * players[i].currentBet; // Pay out the bet
                 } else {
                     players[i].balance += 1; // broke people get one dollar per dealer loss
                 }
@@ -235,24 +290,27 @@ int main() {
         }
 
         if (dealerBusted || dealer.total == 31) goto end_round; // Skip player turns if dealer bustsor wins
-    
 
-        // Rule: Dealer reveals all cards except one
         printf("\nDealer reveals: ");
-        for(int i = 1; i < dealer.handCount; i++) {
-            printf("%s ", dealer.hand[i].suit); //
+        if (dealer.total == 14) {
+            // If dealer hits 14, reveal EVERYTHING
+            for(int i = 0; i < dealer.handCount; i++) {
+                printf("[%s of %s] ", dealer.hand[i].name, dealer.hand[i].suit); 
+            } 
+            printf("\n");
+        } else {
+            // Otherwise, hide the first card
+            for(int i = 1; i < dealer.handCount; i++) {
+                printf("[%s of %s] ", dealer.hand[i].name, dealer.hand[i].suit); 
+            } 
+            printf("[One Card Face Down]\n");
         }
-        printf("[One Card Face Down]\n"); // Dealer shows all but one
 
         // Player's Turn
-        for (int i = 0; i < playerCount; i++) {
+        for (int i = 0; i < playerCount; i++){
             if (players[i].balance > 0) {
                 // Do the player turn, will go until win or bust
-                playerTurn(&players[i], &deck);
-                if(players[i].total >= 14 && dealer.total == 14) { // Loss case by 14
-                    printf("%s loses because the dealer got 14!\n", players[i].name); 
-                    strcpy(players[i].status, "lost_foteen");
-                }
+                playerTurn(&players[i], &deck, dealer.total == 14);
                 // If player hits 14 or 31 and dealer doesn't have 14, player wins
                 if ((players[i].total == 14 || players[i].total == 31) && dealer.total != 14) { // Win case by 31
                     printf("%s wins immediately with %d!\n", players[i].name, players[i].total);
@@ -263,10 +321,10 @@ int main() {
         }
 
         // Final Reveal and Comparison
-        printf("\nDealer reveals hidden card: %s (Total: %d)\n", dealer.hand[0].suit, dealer.total);
+        printf("\nDealer reveals hidden card: [%s of %s] (Total: %d)\n", dealer.hand[0].name, dealer.hand[0].suit, dealer.total);
 
         for (int i = 0; i < playerCount; i++) {
-            if (players[i].balance <= 0 || strcmp(players[i].status, "won_early") == 0 || strcmp(players[i].status, "lost_foteen") == 0) continue; // dont need to display since it already happened
+            if (players[i].balance <= 0 || strcmp(players[i].status, "won_early") == 0 ) continue; // dont need to display since it already happened
 
             if (strcmp(players[i].status, "bust") == 0) {
                 printf("%s busted and loses.\n", players[i].name);
@@ -282,14 +340,22 @@ int main() {
         }
 
     end_round:
+        if(dealer.total == 31){
+            printf("Dealer got to 31, this ");
+        }
         printf("Round over.\nWould you like to continue? (y/n): ");
         char next;
         while(1){
             scanf(" %c", &next);
             if(next == 'y'){
                 for(int i = 0; i < playerCount; i++){
-                    // Get a new bet for all the players
-                    getBet(&players[i]);
+                    // Only ask players who actually have money left
+                    if (players[i].balance > 0) {
+                        getBet(&players[i]);
+                        players[i].balance -= players[i].currentBet;
+                    } else {
+                        printf("Player %s is broke and out of the game!\n", players[i].name);
+                    }
                 }
                 break;
             } else if (next == 'n') {
