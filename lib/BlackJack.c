@@ -63,7 +63,11 @@ void initDeck(Deck *deck) {
     }
     deck->top = 0;
 
-    // Shuffle
+    shuffle (deck);
+    
+}
+
+void shuffle(Deck* deck){ // shuffles the deck via pointer
     for (int i = 0; i < DECK_SIZE; i++) {
         int r = i + rand() % (DECK_SIZE - i);
         card temp = deck->cards[i];
