@@ -340,6 +340,7 @@ int main() {
 
             if (strcmp(players[i].status, "bust") == 0) {
                 printf("%s busted and loses.\n", players[i].name);
+                players[i].balance -= (players[i].currentBet);
             } else {
                 // Rule: Higher hand than dealer wins; equal hands lose
                 if (players[i].total > dealer.total) {
@@ -368,7 +369,6 @@ int main() {
                     // Only ask players who actually have money left
                     if (players[i].balance > 0) {
                         getBet(&players[i]);
-                        players[i].balance -= players[i].currentBet;
                     } else {
                         printf("Player %s is broke and out of the game!\n", players[i].name);
                     }
