@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <time.h>
 
 #define MAX_PLAYERS 4
@@ -20,20 +19,20 @@ typedef struct cards{
     char suit[9];
     int value;
     // added attributes
-    char name[MAX_NAME];
+    char name[MAX_NAME]; // for ease of printing cards
 } card;
 
-typedef struct deck_struct{
+typedef struct deck_struct{ // a struct for the deck
     card cards[DECK_SIZE];
-    int top;
+    int top; // index of the top card of the deck
 } Deck;
 
-typedef struct player_struct{
+typedef struct player_struct{ // struct to track all of the player attributes
     char name[MAX_NAME];
     int balance;
     int currentBet;
     card hand[10];
-    int handCount;
+    int handCount; 
     int total;
     char status[20]; // "stand", "bust", "thirty-one", "fourteen"
 } Player;
@@ -194,7 +193,7 @@ void getBet(Player *p){
     }
 }
 
-// Done by Douglas1
+// Done by Douglas
 int dealersTurn(Dealer *dealer, Deck *deck){
     dealer->total = dealer->hand[0].value;
     int dealerBusted = 0;
@@ -250,9 +249,10 @@ int main() {
     int playerCount;
     printf("How many players? (Max 4): ");
     scanf("%d", &playerCount);
-    if(playerCount > 4){ // If more than 4, sets the player number to 4 
-        printf("MAX PEOPLE IS 4, ONLY MAKING 4 PLAYERS");
-        playerCount = 4;
+    while(playerCount < 1 || playerCount > 4){
+        printf("Player count must be between 1 & 4, try again.\n");
+        printf("How many players?: ");
+        scanf("%d", &playerCount);
     }
 
     // Creates all the player structs for storing player info
@@ -291,7 +291,7 @@ int main() {
         // Dealer strategy: continue drawing to get as close to 31 as possible,
         // Stops at 14, we picked 25 as our stopping point
         if (dealerBusted) {
-            printf("Dealer busted with %d! All active players win double.\n", dealer.total);
+            printf("Dealer busted with %d! All active players win their bet back.\n", dealer.total);
             for (int i = 0; i < playerCount; i++) {
                 if (players[i].balance > 0) {
                     players[i].balance += players[i].currentBet; // Pay out the bet
@@ -301,6 +301,13 @@ int main() {
             }
         }
 
+       if (dealer.total == 31) {
+        for (int i = 0; i < playerCount; i++) {
+            if (players[i].balance > 0){
+                players[i].balance -= players[i].currentBet;
+                }
+            }
+        }
         if (dealerBusted || dealer.total == 31) goto end_round; // Skip player turns if dealer bustsor wins
 
         printf("\nDealer reveals: ");
@@ -355,7 +362,8 @@ int main() {
 
     end_round:
         if(dealer.total == 31){
-            printf("Dealer got to 31, this is over.\n");
+            printf("Dealer got to 31, this round is over.\n");
+            
         }
         else{
             printf("Round over.\n");
@@ -379,7 +387,8 @@ int main() {
                 return 0;
             } else {
                 // Will go until only 'y' or 'n' is entered
-                printf("Invaild Input");
+                printf("Invaild Input\n");
+                printf("would you like to play again? (y/n): ");
             }
         }
 
