@@ -46,6 +46,16 @@ typedef struct dealer_struct{
 
 // Utility Functions
 
+// Done by Douglas
+void shuffle(Deck* deck){ // shuffles the deck via pointer
+    for (int i = 0; i < DECK_SIZE; i++) {
+        int r = i + rand() % (DECK_SIZE - i);
+        card temp = deck->cards[i];
+        deck->cards[i] = deck->cards[r];
+        deck->cards[r] = temp;
+    }
+}
+
 // Done by Lucas
 void initDeck(Deck *deck) {
     char *suits[] = {"Clubs", "Spades", "Hearts", "Diamonds"};
@@ -67,14 +77,7 @@ void initDeck(Deck *deck) {
     
 }
 
-void shuffle(Deck* deck){ // shuffles the deck via pointer
-    for (int i = 0; i < DECK_SIZE; i++) {
-        int r = i + rand() % (DECK_SIZE - i);
-        card temp = deck->cards[i];
-        deck->cards[i] = deck->cards[r];
-        deck->cards[r] = temp;
-    }
-}
+
 
 // Returns the top card // Done by Lucas
 card drawTop(Deck *deck) {
@@ -95,7 +98,7 @@ void updateHandTotal(Player *p) {
 // Game Logic
 
 // Done by Douglas
-void playerTurn(Player *p, Deck *deck, bool dealerFourteen) {
+void playerTurn(Player *p, Deck *deck) {
     char choice[10];
     int acesDrawn = 0; // Track total aces drawn this round
     
@@ -133,8 +136,14 @@ void playerTurn(Player *p, Deck *deck, bool dealerFourteen) {
             break;
         }
 
+        
         printf("Would you like to 'hit' or 'stand'? ");
         scanf("%9s", choice);
+        while (strcmp(choice, "hit") != 0 && strcmp(choice, "stand") != 0){
+            printf("Invalid Choice, try again.\n");
+            printf("Would you like to 'hit' or 'stand'? ");
+            scanf("%9s", choice);
+        }
 
         if (strcmp(choice, "hit") == 0) {
             p->hand[p->handCount++] = drawTop(deck);
@@ -185,7 +194,7 @@ void getBet(Player *p){
     }
 }
 
-// Done by Douglas
+// Done by Douglas1
 int dealersTurn(Dealer *dealer, Deck *deck){
     dealer->total = dealer->hand[0].value;
     int dealerBusted = 0;
@@ -219,7 +228,7 @@ int dealersTurn(Dealer *dealer, Deck *deck){
 
         // Bets are already taken from player accounts so no need to decrement
         if(dealer->total == 31){
-            printf("Dealer hit 31 womp womp :( players lose\n");
+            printf("Dealer hit 31, players lose\n");
             break;
         }
 
@@ -253,7 +262,6 @@ int main() {
         scanf("%49s", players[i].name);
         players[i].balance = 100; // Starting balance is 100
         getBet(&players[i]);
-        players[i].balance -= players[i].currentBet;
         players[i].handCount = 0; // 0 cards
     }
 
@@ -286,7 +294,7 @@ int main() {
             printf("Dealer busted with %d! All active players win double.\n", dealer.total);
             for (int i = 0; i < playerCount; i++) {
                 if (players[i].balance > 0) {
-                    players[i].balance += 2 * players[i].currentBet; // Pay out the bet
+                    players[i].balance += players[i].currentBet; // Pay out the bet
                 } else {
                     players[i].balance += 1; // broke people get one dollar per dealer loss
                 }
@@ -314,11 +322,11 @@ int main() {
         for (int i = 0; i < playerCount; i++){
             if (players[i].balance > 0) {
                 // Do the player turn, will go until win or bust
-                playerTurn(&players[i], &deck, dealer.total == 14);
+                playerTurn(&players[i], &deck);
                 // If player hits 14 or 31 and dealer doesn't have 14, player wins
                 if ((players[i].total == 14 || players[i].total == 31) && dealer.total != 14) { // Win case by 31
                     printf("%s wins immediately with %d!\n", players[i].name, players[i].total);
-                    players[i].balance += (players[i].currentBet * 2);
+                    players[i].balance += (players[i].currentBet);
                     strcpy(players[i].status, "won_early");
                 }
             }
@@ -336,18 +344,22 @@ int main() {
                 // Rule: Higher hand than dealer wins; equal hands lose
                 if (players[i].total > dealer.total) {
                     printf("%s's %d beats Dealer's %d! They win!\n", players[i].name, players[i].total, dealer.total);
-                    players[i].balance += (players[i].currentBet * 2);
+                    players[i].balance += (players[i].currentBet);
                 } else {
                     printf("%s's %d does not beat Dealer's %d. Dealer wins.\n", players[i].name, players[i].total, dealer.total);
+                    players[i].balance -= players[i].currentBet;
                 }
             }
         }
 
     end_round:
         if(dealer.total == 31){
-            printf("Dealer got to 31, this ");
+            printf("Dealer got to 31, this is over.\n");
         }
-        printf("Round over.\nWould you like to continue? (y/n): ");
+        else{
+            printf("Round over.\n");
+        }
+        printf("Would you like to continue? (y/n): ");
         char next;
         while(1){
             scanf(" %c", &next);
