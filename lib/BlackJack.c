@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <time.h>
 
 #define MAX_PLAYERS 4
@@ -20,20 +19,20 @@ typedef struct cards{
     char suit[9];
     int value;
     // added attributes
-    char name[MAX_NAME];
+    char name[MAX_NAME]; // for ease of printing cards
 } card;
 
-typedef struct deck_struct{
+typedef struct deck_struct{ // a struct for the deck
     card cards[DECK_SIZE];
-    int top;
+    int top; // index of the top card of the deck
 } Deck;
 
-typedef struct player_struct{
+typedef struct player_struct{ // struct to track all of the player attributes
     char name[MAX_NAME];
     int balance;
     int currentBet;
     card hand[10];
-    int handCount;
+    int handCount; 
     int total;
     char status[20]; // "stand", "bust", "thirty-one", "fourteen"
 } Player;
@@ -46,7 +45,30 @@ typedef struct dealer_struct{
 
 // Utility Functions
 
-// Done by Lucas
+/*
+ * Function: shuffle
+ * Author: Douglas
+ * Purpose: Randomizes the order of the 52 cards within the deck array
+ * Input: Deck *deck - Pointer to the deck structure to be shuffled.
+ * Output: None (void). Modifies the deck array in place.
+ */
+void shuffle(Deck* deck){ // shuffles the deck via pointer
+    for (int i = 0; i < DECK_SIZE; i++) {
+        int r = i + rand() % (DECK_SIZE - i); // random index 
+        card temp = deck->cards[i];
+        deck->cards[i] = deck->cards[r]; // simple swap
+        deck->cards[r] = temp;
+    }
+}
+
+/*
+ * Function: initDeck
+ * Author: Lucas
+ * Purpose: Initializes a standard 52-card deck by assigning correct suits, 
+ * names, and values. Then resets the top index, and shuffles the result.
+ * Input: Deck *deck - Pointer to the deck structure to be populated.
+ * Output: None (void). Modifies the deck in place.
+ */
 void initDeck(Deck *deck) {
     char *suits[] = {"Clubs", "Spades", "Hearts", "Diamonds"};
     char *names[] = {"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
@@ -67,16 +89,14 @@ void initDeck(Deck *deck) {
     
 }
 
-void shuffle(Deck* deck){ // shuffles the deck via pointer
-    for (int i = 0; i < DECK_SIZE; i++) {
-        int r = i + rand() % (DECK_SIZE - i);
-        card temp = deck->cards[i];
-        deck->cards[i] = deck->cards[r];
-        deck->cards[r] = temp;
-    }
-}
-
-// Returns the top card // Done by Lucas
+/*
+ * Function: drawTop
+ * Author: Lucas
+ * Purpose: Retrieves the top card from the deck array and increments the top index.
+ * Triggers a reshuffle if the deck runs out of cards.
+ * Input: Deck *deck - Pointer to the current game deck.
+ * Output: Returns a single card struct representing the drawn card.
+ */
 card drawTop(Deck *deck) {
     if (deck->top >= DECK_SIZE) {
         initDeck(deck); // Reshuffles and resets deck->top to 0
@@ -84,7 +104,13 @@ card drawTop(Deck *deck) {
     return deck->cards[deck->top++];
 }
 
-// Makes sure the total is fully up to date  // Done by Lucas
+/*
+ * Function: updateHandTotal
+ * Author: Lucas
+ * Purpose: Calculates and updates the total numerical value of the cards currently held in a player's hand.
+ * Input: Player *p - Pointer to the player whose hand total needs updating.
+ * Output: None (void). Updates the player's 'total' variable in place.
+ */
 void updateHandTotal(Player *p) {
     p->total = 0;
     for (int i = 0; i < p->handCount; i++) {
@@ -94,8 +120,16 @@ void updateHandTotal(Player *p) {
 
 // Game Logic
 
-// Done by Douglas
-void playerTurn(Player *p, Deck *deck, bool dealerFourteen) {
+/*
+ * Function: playerTurn
+ * Author: Douglas
+ * Purpose: Manages the interactive turn for a single player. Displays their hand, prompts
+ * for 'hit' or 'stand', enforces Ace value assignment rules, and checks for win/loss
+ * thresholds (14, 31, bust).
+ * Input: Player *p - Pointer to the active player. Deck *deck - Pointer to the game deck.
+ * Output: None (void). Modifies the player's status, hand array, and total score in place.
+ */
+void playerTurn(Player *p, Deck *deck) {
     char choice[10];
     int acesDrawn = 0; // Track total aces drawn this round
     
@@ -133,8 +167,14 @@ void playerTurn(Player *p, Deck *deck, bool dealerFourteen) {
             break;
         }
 
+        
         printf("Would you like to 'hit' or 'stand'? ");
         scanf("%9s", choice);
+        while (strcmp(choice, "hit") != 0 && strcmp(choice, "stand") != 0){
+            printf("Invalid Choice, try again.\n");
+            printf("Would you like to 'hit' or 'stand'? ");
+            scanf("%9s", choice);
+        }
 
         if (strcmp(choice, "hit") == 0) {
             p->hand[p->handCount++] = drawTop(deck);
@@ -149,6 +189,10 @@ void playerTurn(Player *p, Deck *deck, bool dealerFourteen) {
                     int aceVal;
                     printf("You drew an Ace! Is it worth 1 or 11? "); 
                     scanf("%d", &aceVal); 
+                    while(aceVal != 1 && aceVal != 11){
+                        printf("You need to input either 1 or 11: ");
+                        scanf("%d", &aceVal); 
+                    }
                     p->hand[p->handCount-1].value = aceVal;
                 } else {
                     // 2nd or 4th Ace must be the opposite of the previous Ace
@@ -174,7 +218,14 @@ void playerTurn(Player *p, Deck *deck, bool dealerFourteen) {
     }
 }
 
-// Done by Lucas
+/*
+ * Function: getBet
+ * Author: Lucas
+ * Purpose: Prompts a player to enter a bet for the round, ensuring the 
+ * inputted amount does not exceed their current balance or fall to zero/negative.
+ * Input: Player *p - Pointer to the player placing the bet.
+ * Output: None (void). Updates the player's 'currentBet' variable in place.
+ */
 void getBet(Player *p){
     printf("Enter bet for Player %s (current balance: $%d): ", p->name, p->balance);
     scanf(" %d", &p->currentBet);
@@ -185,7 +236,14 @@ void getBet(Player *p){
     }
 }
 
-// Done by Douglas
+/*
+ * Function: dealersTurn
+ * Author: Douglas
+ * Purpose: Automates the dealer's draw phase according to house rules (stops at 14, draws up to 25). 
+ * Includes retroactive Ace downgrades (11 to 1) to prevent busting.
+ * Input: Dealer *dealer - Pointer to the dealer structure. Deck *deck - Pointer to the game deck.
+ * Output: Returns an integer (1 if the dealer busted, 0 otherwise).
+ */
 int dealersTurn(Dealer *dealer, Deck *deck){
     dealer->total = dealer->hand[0].value;
     int dealerBusted = 0;
@@ -209,6 +267,14 @@ int dealersTurn(Dealer *dealer, Deck *deck){
         while (dealer->total > 31 && dealerAces > 0){
             dealer->total -= 10;
             dealerAces--;
+
+            // Change the values of the aces in the hand one at a time;
+            for (int i = 0; i < dealer->handCount; i++) {
+                if (dealer->hand[i].value == 11) {
+                    dealer->hand[i].value = 1;
+                    break; // Only change one Ace per loop iteration
+                }
+            }
         }
 
         // If dealer hits 14, he reveals hand and stops drawing
@@ -219,7 +285,7 @@ int dealersTurn(Dealer *dealer, Deck *deck){
 
         // Bets are already taken from player accounts so no need to decrement
         if(dealer->total == 31){
-            printf("Dealer hit 31 womp womp :( players lose\n");
+            printf("Dealer hit 31, players lose\n");
             break;
         }
 
@@ -233,7 +299,40 @@ int dealersTurn(Dealer *dealer, Deck *deck){
     return dealerBusted;
 }
 
-// Contributed to by both authors equally
+/*
+ * Function: loadDeckFromFile
+ * Author: Lucas
+ * Purpose: Reads a predefined sequence of cards from a specified text file to sequentially populate the 
+ * deck for testing purposes. Reverts to default initialization if the file fails to open.
+ * Input: Deck *deck - Pointer to the game deck. const char *filename - The string name of the text file to read.
+ * Output: None (void). Modifies the deck structure in place.
+ */
+void loadDeckFromFile(Deck *deck, char filename[]) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Error: Could not open %s. Using default shuffled deck instead.\n", filename);
+        initDeck(deck);
+        return;
+    }
+
+    deck->top = 0;
+    int i = 0;
+    // Assumes file format is: Value Name Suit (e.g., 11 Ace Hearts)
+    while (i < DECK_SIZE && fscanf(file, "%d %49s %8s", &deck->cards[i].value, deck->cards[i].name, deck->cards[i].suit) == 3) {
+        i++;
+    }
+    fclose(file);
+    printf("Deck successfully loaded from %s!\n", filename);
+}
+
+/*
+ * Function: main
+ * Author: Lucas Staab, Douglas Sheppard
+ * Purpose: The main game loop. Handles player initialization, round transitions, 
+ * file loading prompts, betting phases, turn order execution, and final win/loss balance comparisons.
+ * Input: None.
+ * Output: Returns 0 upon successful program exit.
+ */
 int main() {
     // Seeds the random so the deck is not the same
     srand(time(NULL));
@@ -241,9 +340,10 @@ int main() {
     int playerCount;
     printf("How many players? (Max 4): ");
     scanf("%d", &playerCount);
-    if(playerCount > 4){ // If more than 4, sets the player number to 4 
-        printf("MAX PEOPLE IS 4, ONLY MAKING 4 PLAYERS");
-        playerCount = 4;
+    while(playerCount < 1 || playerCount > 4){
+        printf("Player count must be between 1 & 4, try again.\n");
+        printf("How many players?: ");
+        scanf("%d", &playerCount);
     }
 
     // Creates all the player structs for storing player info
@@ -253,7 +353,6 @@ int main() {
         scanf("%49s", players[i].name);
         players[i].balance = 100; // Starting balance is 100
         getBet(&players[i]);
-        players[i].balance -= players[i].currentBet;
         players[i].handCount = 0; // 0 cards
     }
 
@@ -261,7 +360,18 @@ int main() {
     while (running) {
         // Initialize deck
         Deck deck; 
-        initDeck(&deck);
+        char loadChoice;
+        printf("\nWould you like to load a test deck from a file? (y/n): ");
+        scanf(" %c", &loadChoice);
+        
+        if (loadChoice == 'y') {
+            char filename[100];
+            printf("Enter filename: ");
+            scanf("%99s", filename);
+            loadDeckFromFile(&deck, filename);
+        } else {
+            initDeck(&deck);
+        }
         Dealer dealer;
         // Dealer deals one card face down to himself
         dealer.handCount = 0;
@@ -283,16 +393,23 @@ int main() {
         // Dealer strategy: continue drawing to get as close to 31 as possible,
         // Stops at 14, we picked 25 as our stopping point
         if (dealerBusted) {
-            printf("Dealer busted with %d! All active players win double.\n", dealer.total);
+            printf("Dealer busted with %d! All active players win their bet back.\n", dealer.total);
             for (int i = 0; i < playerCount; i++) {
                 if (players[i].balance > 0) {
-                    players[i].balance += 2 * players[i].currentBet; // Pay out the bet
+                    players[i].balance += players[i].currentBet; // Pay out the bet
                 } else {
                     players[i].balance += 1; // broke people get one dollar per dealer loss
                 }
             }
         }
 
+       if (dealer.total == 31) {
+        for (int i = 0; i < playerCount; i++) {
+            if (players[i].balance > 0){
+                players[i].balance -= players[i].currentBet;
+                }
+            }
+        }
         if (dealerBusted || dealer.total == 31) goto end_round; // Skip player turns if dealer bustsor wins
 
         printf("\nDealer reveals: ");
@@ -314,11 +431,11 @@ int main() {
         for (int i = 0; i < playerCount; i++){
             if (players[i].balance > 0) {
                 // Do the player turn, will go until win or bust
-                playerTurn(&players[i], &deck, dealer.total == 14);
+                playerTurn(&players[i], &deck);
                 // If player hits 14 or 31 and dealer doesn't have 14, player wins
                 if ((players[i].total == 14 || players[i].total == 31) && dealer.total != 14) { // Win case by 31
                     printf("%s wins immediately with %d!\n", players[i].name, players[i].total);
-                    players[i].balance += (players[i].currentBet * 2);
+                    players[i].balance += (players[i].currentBet);
                     strcpy(players[i].status, "won_early");
                 }
             }
@@ -332,22 +449,28 @@ int main() {
 
             if (strcmp(players[i].status, "bust") == 0) {
                 printf("%s busted and loses.\n", players[i].name);
+                players[i].balance -= (players[i].currentBet);
             } else {
                 // Rule: Higher hand than dealer wins; equal hands lose
                 if (players[i].total > dealer.total) {
                     printf("%s's %d beats Dealer's %d! They win!\n", players[i].name, players[i].total, dealer.total);
-                    players[i].balance += (players[i].currentBet * 2);
+                    players[i].balance += (players[i].currentBet);
                 } else {
                     printf("%s's %d does not beat Dealer's %d. Dealer wins.\n", players[i].name, players[i].total, dealer.total);
+                    players[i].balance -= players[i].currentBet;
                 }
             }
         }
 
     end_round:
         if(dealer.total == 31){
-            printf("Dealer got to 31, this ");
+            printf("Dealer got to 31, this round is over.\n");
+            
         }
-        printf("Round over.\nWould you like to continue? (y/n): ");
+        else{
+            printf("Round over.\n");
+        }
+        printf("Would you like to continue? (y/n): ");
         char next;
         while(1){
             scanf(" %c", &next);
@@ -356,7 +479,6 @@ int main() {
                     // Only ask players who actually have money left
                     if (players[i].balance > 0) {
                         getBet(&players[i]);
-                        players[i].balance -= players[i].currentBet;
                     } else {
                         printf("Player %s is broke and out of the game!\n", players[i].name);
                     }
@@ -367,7 +489,8 @@ int main() {
                 return 0;
             } else {
                 // Will go until only 'y' or 'n' is entered
-                printf("Invaild Input");
+                printf("Invaild Input\n");
+                printf("would you like to play again? (y/n): ");
             }
         }
 
